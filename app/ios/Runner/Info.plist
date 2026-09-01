@@ -1,0 +1,1 @@
+<plist version="1.0"><dict><key>NSCameraUsageDescription</key><string>Used to scan each book barcode and capture its cover.</string><key>NSPhotoLibraryUsageDescription</key><string>Used to select a book cover.</string></dict></plist>
