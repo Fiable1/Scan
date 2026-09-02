@@ -19,11 +19,18 @@ def api_info(request): return Response({'name':'Rwanda School Book Scanner API',
 @permission_classes([AllowAny])
 def schools(request): return Response([{'id':s.id,'name':s.name,'district':s.district} for s in School.objects.filter(active=True,country__iexact='Rwanda').order_by('name')])
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def districts(request):
+    dists=['Gasabo','Kicukiro','Nyarugenge','Rwamagana','Muhanga','Huye','Nyamagabe','Gisagara','Nyagatare','Gatsibo','Kayonza','Kirehe','Ngoma','Bugesera','Nyanza','Nyaruguru','Ruhango','Kamonyi','Musanze','Burera','Gakenke','Gicumbi','Rulindo','Karongi','Ngororero','Nyabihu','Rubavu','Rusizi','Nyamasheke']
+    dists=set(dists) | set(School.objects.filter(country__iexact='Rwanda').values_list('district',flat=True))
+    return Response(sorted(d for d in dists if d))
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
     s=RegisterSerializer(data=request.data); s.is_valid(raise_exception=True); profile=s.save(); token,_=Token.objects.get_or_create(user=profile.user)
-    return Response({'token':token.key,'librarian':profile.user.get_full_name(),'school':profile.school.name},status=201)
+    return Response({'token':token.key,'librarian':profile.user.get_full_name(),'school':profile.school.name,'district':profile.school.district},status=201)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -83,4 +90,5 @@ def analytics(request):
     today=timezone.localdate()
     by_grade=list(qs.values('grade').annotate(total=Count('id')).order_by('-total'))
     by_category=list(qs.values('category').annotate(total=Count('id')).order_by('-total'))
-    return Response({'total_books':qs.count(),'today':qs.filter(scanned_at__date=today).count(),'matched':qs.filter(matched_catalog=True).count(),'unmatched':qs.filter(matched_catalog=False).count(),'by_grade':by_grade,'by_category':by_category})
+    recent=list(qs.order_by('-scanned_at')[:3])
+    return Response({'total_books':qs.count(),'today':qs.filter(scanned_at__date=today).count(),'matched':qs.filter(matched_catalog=True).count(),'unmatched':qs.filter(matched_catalog=False).count(),'by_grade':by_grade,'by_category':by_category,'recent_scans':ScanSerializer(recent,many=True,context={'request':request}).data})

@@ -7,14 +7,13 @@ class RegisterSerializer(serializers.Serializer):
     email=serializers.EmailField()
     phone=serializers.CharField(max_length=30, required=False, allow_blank=True)
     password=serializers.CharField(write_only=True,min_length=6)
-    school_id=serializers.IntegerField()
-    def validate_school_id(self,v):
-        try: school=School.objects.get(pk=v,active=True,country__iexact='Rwanda')
-        except School.DoesNotExist: raise serializers.ValidationError('Select an active registered Rwandan school.')
-        return v
+    district=serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
+    school_name=serializers.CharField(max_length=255)
+    def validate(self, attrs):
+        if User.objects.filter(username=attrs['email']).exists(): raise serializers.ValidationError({'email':'Already registered.'})
+        return attrs
     def create(self,data):
-        school=School.objects.get(pk=data['school_id'])
-        if User.objects.filter(username=data['email']).exists(): raise serializers.ValidationError({'email':'Already registered.'})
+        school,_=School.objects.get_or_create(name=data['school_name'].strip(),defaults={'district':data.get('district','').strip(),'country':'Rwanda','active':True})
         user=User.objects.create_user(username=data['email'],email=data['email'],password=data['password'],first_name=data['full_name'])
         profile=Librarian.objects.create(user=user,school=school,phone=data.get('phone',''))
         return profile

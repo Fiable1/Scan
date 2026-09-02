@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/book_scan.dart';
@@ -7,9 +6,11 @@ import '../models/book_scan.dart';
 class ApiService {
   static const _urlKey = 'backend_url', _tokenKey = 'auth_token';
 
+  static const String deployedBaseUrl = 'https://backend-ashen-kappa-32.vercel.app';
+
   static Future<String> baseUrl() async {
     final p = await SharedPreferences.getInstance();
-    return p.getString(_urlKey) ?? (kIsWeb ? 'http://127.0.0.1:8000' : 'http://10.0.2.2:8000');
+    return p.getString(_urlKey) ?? deployedBaseUrl;
   }
 
   static Future<void> setBaseUrl(String v) async =>
@@ -43,6 +44,12 @@ class ApiService {
     return List<Map<String, dynamic>>.from(jsonDecode(r.body));
   }
 
+  static Future<List<String>> districts() async {
+    final r = await http.get(Uri.parse('${await baseUrl()}/api/districts/'));
+    if (r.statusCode >= 400) throw Exception('Could not load districts');
+    return List<String>.from(jsonDecode(r.body));
+  }
+
   static Future<Map<String, dynamic>> login(String email, String password) =>
       _post('auth/login/', {'email': email, 'password': password});
 
@@ -72,6 +79,20 @@ class ApiService {
     final body = await streamed.stream.bytesToString();
     if (streamed.statusCode >= 400) throw Exception(body);
     return BookScan.fromJson(jsonDecode(body));
+  }
+
+  static Future<BookScan> saveScanNoCover({
+    required String code,
+    required Map<String, String> fields,
+  }) async {
+    final r = await http.post(Uri.parse('${await baseUrl()}/api/scans/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token ${await token()}'
+        },
+        body: jsonEncode({'code': code, ...fields}));
+    if (r.statusCode >= 400) throw Exception(r.body);
+    return BookScan.fromJson(jsonDecode(r.body));
   }
 
   static Future<List<BookScan>> scans({String q = ''}) async {

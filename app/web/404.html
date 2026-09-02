@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rwanda School Book Scanner</title>
+  <script type="text/javascript">
+    // GitHub Pages 404 fallback: any unmatched path loads the app root.
+    var segments = location.pathname.split('/');
+    var idx = segments.indexOf('Scan');
+    var base = (idx >= 0 ? '/' + segments.slice(0, idx + 1).join('/') : '/') + '/';
+    var query = location.search || '';
+    if (location.pathname.endsWith('404.html')) {
+      location.replace(base + '#' + segments.slice(idx + 1).join('/') + query);
+    } else if (location.pathname !== base) {
+      location.replace(base);
+    }
+  </script>
+</head>
+<body>
+  <p>Redirecting to the Rwanda School Book Scanner&hellip;</p>
+</body>
+</html>

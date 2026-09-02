@@ -1,8 +1,8 @@
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../platform/platform_helpers.dart';
+import '../theme.dart';
 import '../services/api_service.dart';
+import 'book_info_screen.dart';
+import 'home_shell.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -11,212 +11,383 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  String? code;
+  Future<void> _manualEntry() async {
+    // Web-friendly manual ISBN entry that mirrors the camera scan result.
+    final controller = TextEditingController();
+    final code = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: kNavy,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (c) => Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Enter Barcode / ISBN',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: const TextStyle(color: Color(0xFF25140f)),
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'e.g. 9780199386429',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              PrimaryButton(
+                label: 'LOOKUP BOOK',
+                onPressed: () =>
+                    Navigator.pop(c, controller.text.trim()),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (code == null || code.isEmpty) return;
+    await _lookup(code);
+  }
 
-  Future<void> lookupAndProceed(String scannedCode) async {
-    setState(() => code = scannedCode);
+  Future<void> _lookup(String code) async {
     try {
-      final result = await ApiService.lookup(scannedCode);
+      final info = await ApiService.lookup(code);
       if (!mounted) return;
-      Navigator.push(context, MaterialPageRoute(
-          builder: (_) => ReviewSaveScreen(code: scannedCode, info: result)));
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => BookInfoScreen(code: code, info: info)));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Lookup failed: $e')));
+        // Even on lookup failure allow manual entry.
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => BookInfoScreen(code: code)));
       }
     }
   }
 
   @override
-  Widget build(BuildContext c) => Scaffold(
-        appBar: AppBar(title: const Text('Scan Barcode / ISBN')),
-        body: code == null
-            ? _BarcodeInputPage(onDetected: lookupAndProceed)
-            : Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.qr_code_2, size: 90),
-                    const SizedBox(height: 20),
-                    Text('Code scanned: $code', style: Theme.of(c).textTheme.titleLarge),
-                    const SizedBox(height: 20),
-                    FilledButton.icon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => ReviewSaveScreen(code: code!, info: const {}))),
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('CONTINUE'),
-                    ),
-                  ],
+  Widget build(BuildContext c) {
+    return Scaffold(
+      backgroundColor: kDarkBg,
+      body: Column(
+        children: [
+          const StatusBar(dark: true),
+          Container(
+            color: kNavy,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              children: [
+                AppBackButton(onPress: () {
+                  // navigate back to dashboard
+                  Navigator.pushReplacement(c,
+                      MaterialPageRoute(builder: (_) => const HomeShell()));
+                }),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Scan Barcode',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                ),
+                const Icon(Icons.search, color: Colors.white, size: 22),
+              ],
+            ),
+          ),
+          // Scanner area
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0A0F1E), Color(0xFF0D1523), Color(0xFF0A0F1E)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-      );
-}
-
-class _BarcodeInputPage extends StatefulWidget {
-  final Function(String) onDetected;
-  const _BarcodeInputPage({required this.onDetected});
-  @override
-  State<_BarcodeInputPage> createState() => _BarcodeInputPageState();
-}
-
-class _BarcodeInputPageState extends State<_BarcodeInputPage> {
-  final manualController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.qr_code_scanner, size: 80, color: Color(0xFF0D47A1)),
-          const SizedBox(height: 20),
-          Text(
-            kIsWeb ? 'Enter barcode / ISBN manually' : 'Scan or enter barcode / ISBN',
-            style: const TextStyle(fontSize: 18),
+              child: Stack(
+                children: [
+                  // Vignette
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            radius: 1.3,
+                            colors: [
+                              Colors.transparent,
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.55),
+                            ],
+                            stops: const [0.35, 0.6, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Align barcode within the frame',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: 256,
+                          height: 160,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                child: _Corner(horizontal: true),
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: RotatedBox(
+                                    quarterTurns: 1, child: _Corner(horizontal: true)),
+                              ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: RotatedBox(
+                                    quarterTurns: 2, child: _Corner(horizontal: true)),
+                              ),
+                              Positioned(
+                                left: 0,
+                                bottom: 0,
+                                child: RotatedBox(
+                                    quarterTurns: 3, child: _Corner(horizontal: true)),
+                              ),
+                              // fake barcode lines
+                              Positioned(
+                                left: 16,
+                                right: 16,
+                                top: 16,
+                                bottom: 16,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(
+                                    28,
+                                    (i) => Container(
+                                      width: (i % 3 == 0)
+                                          ? 3
+                                          : (i.isEven ? 2 : 1),
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 1),
+                                      height: double.infinity,
+                                      color: Colors.white.withOpacity(0.2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // red laser
+                              Align(
+                                alignment: Alignment.center,
+                                child: Container(
+                                  height: 2,
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF87171),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.red
+                                            .withOpacity(0.5),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // tappable reveal
+                              Positioned.fill(
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _manualEntry,
+                                    child: const SizedBox(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Position the barcode clearly within the frame',
+                          style: TextStyle(
+                              color: kTextGray, fontSize: 12),
+                        ),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: _manualEntry,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: const Text('Enter ISBN manually',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: manualController,
-            decoration: const InputDecoration(
-                labelText: 'Barcode / ISBN', border: OutlineInputBorder()),
-            onSubmitted: (v) {
-              if (v.trim().isNotEmpty) widget.onDetected(v.trim());
-            },
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () {
-              if (manualController.text.trim().isNotEmpty) {
-                widget.onDetected(manualController.text.trim());
-              }
-            },
-            child: const Padding(
-                padding: EdgeInsets.all(14), child: Text('LOOKUP BOOK')),
+          // Bottom action bar
+          Container(
+            color: kNavy,
+            padding: const EdgeInsets.fromLTRB(32, 20, 32, 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _ActionButton(Icons.photo_outlined, 'Gallery', onTap: _manualEntry),
+                GestureDetector(
+                  onTap: _manualEntry,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: kAccent,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: const Color(0xFF93C5FD), width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                                color: kAccent.withOpacity(0.4),
+                                blurRadius: 20,
+                                spreadRadius: 2),
+                          ],
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: CustomPaint(
+                                painter: _ScanBarcodeIcon()),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text('Capture',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+                _ActionButton(Icons.help_outline, 'How to scan?', onTap: _manualEntry),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-
-  @override
-  void dispose() {
-    manualController.dispose();
-    super.dispose();
-  }
 }
 
-class ReviewSaveScreen extends StatefulWidget {
-  final String code;
-  final Map<String, dynamic> info;
-  const ReviewSaveScreen({super.key, required this.code, required this.info});
+class _ScanBarcodeIcon extends CustomPainter {
   @override
-  State<ReviewSaveScreen> createState() => _ReviewSaveScreenState();
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white;
+    final widths = [size.width * 0.1, size.width * 0.1, size.width * 0.1, size.width * 0.1, size.width * 0.1];
+    var x = 0.0;
+    final gap = size.width * 0.06;
+    for (final w in widths) {
+      canvas.drawRect(Rect.fromLTWH(x, 0, w, size.height), p);
+      x += w + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
-class _ReviewSaveScreenState extends State<ReviewSaveScreen> {
-  late final Map<String, TextEditingController> c;
-  bool saving = false;
-  Uint8List? coverBytes;
-  String? coverName;
-
+class _Corner extends StatelessWidget {
+  final bool horizontal;
+  const _Corner({required this.horizontal});
   @override
-  void initState() {
-    super.initState();
-    c = {
-      for (final k in ['title', 'author', 'grade', 'category', 'isbn', 'publisher', 'language'])
-        k: TextEditingController(text: widget.info[k]?.toString() ?? '')
-    };
-  }
-
-  Future<void> pickCover() async {
-    final result = await pickImageFile();
-    if (result != null) {
-      setState(() {
-        coverBytes = Uint8List.fromList(result.$1);
-        coverName = result.$2;
-      });
-    }
-  }
-
-  Future<void> save() async {
-    if (coverBytes == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Please select a cover image')));
-      }
-      return;
-    }
-    setState(() => saving = true);
-    try {
-      await ApiService.saveScan(
-          code: widget.code,
-          coverBytes: coverBytes!.toList(),
-          coverName: coverName ?? 'cover.jpg',
-          fields: {for (final e in c.entries) e.key: e.value.text});
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Book recorded and Excel file updated.')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } finally {
-      if (mounted) setState(() => saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext x) => Scaffold(
-        appBar: AppBar(title: const Text('Book Information')),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
+  Widget build(BuildContext c) => SizedBox(
+        width: 32,
+        height: 32,
+        child: Stack(
           children: [
-            if (coverBytes != null)
-              Image.memory(coverBytes!, height: 220, fit: BoxFit.cover)
-            else
-              Container(
-                height: 220,
-                color: Colors.grey[200],
-                child: const Center(
-                    child: Text('No cover image selected',
-                        style: TextStyle(color: Colors.grey))),
-              ),
-            const SizedBox(height: 12),
-            FilledButton.tonal(
-              onPressed: pickCover,
-              child: const Text('SELECT COVER IMAGE'),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                  width: 32, height: 4,
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF60A5FA),
+                      borderRadius: BorderRadius.circular(8))),
             ),
-            const SizedBox(height: 12),
-            Text('Code: ${widget.code}'),
-            if (widget.info['matched'] == true)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Chip(label: Text('Information found from code')),
-              ),
-            for (final k in c.keys)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: TextField(
-                  controller: c[k],
-                  decoration: InputDecoration(
-                    labelText: k[0].toUpperCase() + k.substring(1),
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: saving ? null : save,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Text(saving ? 'SAVING...' : 'SAVE BOOK TO SYSTEM & EXCEL'),
-              ),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                  width: 4, height: 32,
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF60A5FA),
+                      borderRadius: BorderRadius.circular(8))),
             ),
+          ],
+        ),
+      );
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ActionButton(this.icon, this.label, {required this.onTap});
+  @override
+  Widget build(BuildContext c) => GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(height: 6),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 12)),
           ],
         ),
       );
