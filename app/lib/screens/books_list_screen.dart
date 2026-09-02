@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
+import '../platform/platform_helpers.dart';
 import '../services/api_service.dart';
 import '../models/book_scan.dart';
 
@@ -30,15 +28,19 @@ class _BooksListScreenState extends State<BooksListScreen> {
   }
 
   Future<void> download() async {
-    final r = await ApiService.excel();
-    if (r.statusCode != 200) throw Exception('Excel download failed');
-    final dir = await getApplicationDocumentsDirectory();
-    final f = File('${dir.path}/rwanda_school_book_scans.xlsx');
-    await f.writeAsBytes(r.bodyBytes);
-    await OpenFilex.open(f.path);
-    if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Excel saved to ${f.path}')));
+    try {
+      final r = await ApiService.excel();
+      if (r.statusCode != 200) throw Exception('Excel download failed');
+      await downloadFile(r.bodyBytes, 'rwanda_school_book_scans.xlsx');
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Excel download started.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      }
     }
   }
 
