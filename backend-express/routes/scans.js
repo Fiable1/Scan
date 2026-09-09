@@ -2,12 +2,13 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const ExcelJS = require('exceljs');
 const { BookScan, BookCatalog } = require('../models');
 const { authMiddleware, getLibrarianProfile } = require('../middleware/auth');
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, '..', 'media', 'covers');
+const uploadDir = path.join(os.tmpdir(), 'covers');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -189,15 +190,11 @@ router.get('/scans/excel', authMiddleware, async (req, res) => {
     ws.getRow(1).font = { bold: true };
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
-    const excelDir = path.join(__dirname, '..', 'media', 'excel');
-    fs.mkdirSync(excelDir, { recursive: true });
+    const buffer = await workbook.xlsx.writeBuffer();
     const filename = `${(profile.profile.school.name || 'school').replace(/\s+/g, '_')}_book_scans.xlsx`;
-    const filePath = path.join(excelDir, filename);
-    await workbook.xlsx.writeFile(filePath);
-
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    return res.sendFile(filePath);
+    return res.send(buffer);
   } catch (err) {
     console.error('Excel error:', err);
     return res.status(500).json({ detail: 'Failed to generate Excel' });
