@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import 'register_screen.dart';
 import 'home_shell.dart';
+import 'backend_url_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -87,6 +88,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               const TextStyle(color: Color(0xFF93C5FD), fontSize: 12)),
                     ],
                   ),
+                ),
+                IconButton(
+                  onPressed: () => showBackendUrlDialog(context),
+                  icon: const Icon(Icons.dns_outlined,
+                      color: Colors.white, size: 20),
+                  tooltip: _t('Backend URL', rw: 'URL y\'inyuma', fr: 'URL du backend'),
                 ),
               ],
             ),

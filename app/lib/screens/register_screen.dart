@@ -13,6 +13,15 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  static const List<String> _rwandaDistricts = [
+    'Gasabo', 'Kicukiro', 'Nyarugenge', 'Rwamagana', 'Muhanga',
+    'Huye', 'Nyamagabe', 'Gisagara', 'Nyagatare', 'Gatsibo',
+    'Kayonza', 'Kirehe', 'Ngoma', 'Bugesera', 'Nyanza',
+    'Nyaruguru', 'Ruhango', 'Kamonyi', 'Musanze', 'Burera',
+    'Gakenke', 'Gicumbi', 'Rulindo', 'Karongi', 'Ngororero',
+    'Nyabihu', 'Rubavu', 'Rusizi', 'Nyamasheke',
+  ];
+
   final name = TextEditingController();
   final email = TextEditingController();
   final phone = TextEditingController();
@@ -38,9 +47,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> load() async {
     try {
-      districts = await ApiService.districts();
-      if (mounted) setState(() {});
+      final dl = await ApiService.districts();
+      if (mounted && dl.isNotEmpty) {
+        setState(() => districts = dl);
+        return;
+      }
     } catch (_) {}
+    // Offline / phone-without-network: keep the dropdown usable.
+    districts = [..._rwandaDistricts];
+    if (mounted) setState(() {});
   }
 
   Future<void> register() async {

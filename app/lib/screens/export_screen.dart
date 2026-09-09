@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../platform/platform_helpers.dart';
 import 'login_screen.dart';
+import 'backend_url_dialog.dart';
 
 class ExportScreen extends StatefulWidget {
   const ExportScreen({super.key});
@@ -15,6 +16,15 @@ class ExportScreen extends StatefulWidget {
 class _ExportScreenState extends State<ExportScreen> {
   bool downloaded = false;
   bool downloading = false;
+  String baseUrl = ApiService.deployedBaseUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    ApiService.baseUrl().then((v) {
+      if (mounted) setState(() => baseUrl = v);
+    });
+  }
 
   String _t(String en, {String? rw, String? fr}) {
     final loc = context.read<AppSettings>().locale;
@@ -352,20 +362,17 @@ class _ExportScreenState extends State<ExportScreen> {
                                   color: titleColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600)),
-                          subtitle: const Text(
-                              'localhost:5000',
+                          subtitle: Text(baseUrl,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style:
                                   TextStyle(color: kTextGray, fontSize: 11)),
-                          trailing: const Icon(Icons.chevron_right,
+                          trailing: const Icon(Icons.edit_outlined,
                               color: kTextGray, size: 20),
                           onTap: () async {
-                            final ok = await ApiService.testConnection();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text(ok
-                                      ? _t('Backend connection successful', rw: 'Ihuza n\'inyuma ryakunze', fr: 'Connexion backend réussie')
-                                      : _t('Could not connect to backend', rw: 'Ntihashoboye guhuza n\'inyuma', fr: 'Impossible de se connecter au backend'))));
-                            }
+                            await showBackendUrlDialog(context);
+                            final v = await ApiService.baseUrl();
+                            if (mounted) setState(() => baseUrl = v);
                           },
                         ),
                         ListTile(
