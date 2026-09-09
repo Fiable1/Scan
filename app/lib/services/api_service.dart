@@ -6,15 +6,52 @@ import '../models/book_scan.dart';
 class ApiService {
   static const _urlKey = 'backend_url', _tokenKey = 'auth_token';
 
-  static const String deployedBaseUrl = 'http://localhost:5000';
+  static const String deployedBaseUrl = 'https://backend-express-pied.vercel.app';
 
-  static Future<String> baseUrl() async {
+  static String? _resolved;
+
+  /// Automatically finds the reachable backend (no manual URL needed).
+  /// Tries the saved URL first, then the dev machine's LAN address, the
+  /// Android emulator host, and finally localhost. First candidate that
+  /// answers /api/ wins and is remembered for the session.
+  static Future<void> discover() async {
+    if (_resolved != null) return;
     final p = await SharedPreferences.getInstance();
-    return p.getString(_urlKey) ?? deployedBaseUrl;
+    final stored = (p.getString(_urlKey) ?? '').replaceAll(RegExp(r'/+$'), '');
+    final candidates = <String>{
+      if (stored.isNotEmpty && stored != 'http://localhost:5000') stored,
+      deployedBaseUrl,
+      'http://10.0.2.2:5000', // Android emulator -> host
+      'http://localhost:5000',
+    };
+    for (final c in candidates) {
+      try {
+        final r = await http.get(Uri.parse('$c/api/'))
+            .timeout(const Duration(seconds: 2));
+        if (r.statusCode == 200) {
+          _resolved = c;
+          break;
+        }
+      } catch (_) {
+        // try next candidate
+      }
+    }
+    _resolved ??= deployedBaseUrl;
   }
 
-  static Future<void> setBaseUrl(String v) async =>
-      (await SharedPreferences.getInstance()).setString(_urlKey, v.replaceAll(RegExp(r'/+$'), ''));
+  static Future<String> baseUrl() async {
+    if (_resolved != null) return _resolved!;
+    final p = await SharedPreferences.getInstance();
+    final v = (p.getString(_urlKey) ?? '').replaceAll(RegExp(r'/+$'), '');
+    if (v.isNotEmpty && v != 'http://localhost:5000') return v;
+    return deployedBaseUrl;
+  }
+
+  static Future<void> setBaseUrl(String v) async {
+    final clean = v.replaceAll(RegExp(r'/+$'), '');
+    _resolved = clean;
+    (await SharedPreferences.getInstance()).setString(_urlKey, clean);
+  }
 
   static Future<String?> token() async =>
       (await SharedPreferences.getInstance()).getString(_tokenKey);

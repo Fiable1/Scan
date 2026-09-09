@@ -62,6 +62,7 @@ class _SplashGate extends StatelessWidget {
   @override
   Widget build(BuildContext c) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ApiService.discover();
       Provider.of<AppSettings>(c, listen: false).load();
     });
     return FutureBuilder(
