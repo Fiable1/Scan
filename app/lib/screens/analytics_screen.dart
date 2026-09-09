@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -11,6 +13,13 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Map<String, dynamic>? d;
+
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
 
   @override
   void initState() {
@@ -42,22 +51,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   @override
   Widget build(BuildContext c) {
-    final cats = _categories();
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    final titleColor = isDark ? kDarkText : kNavy;
+    final grouped = _categories();
     final total = _total;
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: isDark ? kDarkScaffold : kBg,
       body: Column(
         children: [
           AppHeaderBar(
             leading: AppBackButton(onPress: () => Navigator.pop(c)),
-            title: 'Analytics',
+            title: _t('Analytics', rw: 'Icyifuzo', fr: 'Analyses'),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20)),
-              child: const Text('This Month',
-                  style: TextStyle(
+              child: Text(_t('This Month', rw: 'Ukwezi', fr: 'Ce mois'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w500)),
@@ -73,11 +84,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     children: [
                       Expanded(
                         child: _StatDark(
-                            'Total Books', _fmt(total), kNavy),
+                            _t('Total Books', rw: 'Ibitabo byose', fr: 'Total de livres'), _fmt(total), kNavy),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                          child: _StatDark('Today\'s Books', _fmt(_today),
+                          child: _StatDark(_t('Today\'s Books', rw: 'Ibitabo bya Uyu Munsi', fr: 'Livres du jour'), _fmt(_today),
                               kAccent)),
                     ],
                   ),
@@ -87,33 +98,33 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Categories',
+                        Text(_t('Categories', rw: 'Ibyiciro', fr: 'Catégories'),
                             style: TextStyle(
-                                color: kNavy,
+                                color: titleColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14)),
-                        const SizedBox(height: 16),
                         Row(
                           children: [
                             SizedBox(
                               width: 140,
                               height: 140,
                               child: DonutChart(
-                                  categories: cats, total: total),
+                                  categories: grouped, total: total, isDark: isDark),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
-                                children: cats.isEmpty
-                                    ? [const Text('No data',
+                                children: grouped.isEmpty
+                                    ? [Text(_t('No data', rw: 'Nta makuru', fr: 'Aucune donnée'),
                                         style: TextStyle(
-                                            color: kTextGray))]
-                                    : cats
+                                            color: isDark ? kDarkTextMuted : kTextGray))]
+                                    : grouped
                                         .take(5)
                                         .map((e) => _legendRow(
                                             e['name'].toString(),
                                             e['count'] as int,
-                                            total))
+                                            total,
+                                            isDark))
                                         .toList(),
                               ),
                             ),
@@ -128,9 +139,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Books Scanned Over Time',
+                        Text(_t('Books Scanned Over Time', rw: 'Ibitabo byasomwe mugihe', fr: 'Livres scannés au fil du temps'),
                             style: TextStyle(
-                                color: kNavy,
+                                color: titleColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14)),
                         const Text('2023',
@@ -141,7 +152,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           height: 100,
                           width: double.infinity,
                           child: CustomPaint(
-                              painter: LineChartPainter()),
+                              painter: LineChartPainter(isDark: isDark)),
                         ),
                       ],
                     ),
@@ -152,17 +163,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Top Categories This Month',
+                        Text(_t('Top Categories This Month', rw: 'Ibyiciro byo hejuru Ukwezi', fr: 'Meilleures catégories ce mois'),
                             style: TextStyle(
-                                color: kNavy,
+                                color: titleColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14)),
                         const SizedBox(height: 12),
-                        if (cats.isEmpty)
-                          const Text('No data',
-                              style: TextStyle(color: kTextGray))
+                        if (grouped.isEmpty)
+                          Text(_t('No data', rw: 'Nta makuru', fr: 'Aucune donnée'),
+                              style: TextStyle(
+                                  color: isDark ? kDarkTextMuted : kTextGray))
                         else
-                          ...cats.take(4).map((e) {
+                          ...grouped.take(4).map((e) {
                             final pct = total == 0
                                 ? 0.0
                                 : (e['count'] as int) / total * 100;
@@ -175,13 +187,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(e['name'].toString(),
-                                          style: const TextStyle(
-                                              color: Color(0xFF4B5563),
+                                          style: TextStyle(
+                                              color: isDark ? kDarkTextMuted : const Color(0xFF4B5563),
                                               fontSize: 12,
                                               fontWeight: FontWeight.w500)),
                                       Text(_fmt(e['count'] as int),
-                                          style: const TextStyle(
-                                              color: kNavy,
+                                          style: TextStyle(
+                                              color: titleColor,
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold)),
                                     ],
@@ -192,8 +204,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                     child: LinearProgressIndicator(
                                       value: (pct / 100).clamp(0.0, 1.0),
                                       minHeight: 8,
-                                      backgroundColor:
-                                          const Color(0xFFF3F4F6),
+                                      backgroundColor: isDark
+                                          ? kDarkBorder
+                                          : const Color(0xFFF3F4F6),
                                       valueColor:
                                           const AlwaysStoppedAnimation(
                                               kAccent),
@@ -223,7 +236,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return s;
   }
 
-  Widget _legendRow(String name, int count, int total) {
+  Widget _legendRow(String name, int count, int total, bool isDark) {
     final pct = total == 0 ? 0 : (count / total * 100).round();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -239,11 +252,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           Expanded(
               child: Text(name,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: Color(0xFF4B5563), fontSize: 11))),
+                  style: TextStyle(
+                      color: isDark ? kDarkTextMuted : const Color(0xFF4B5563), fontSize: 11))),
           Text('$pct%',
-              style: const TextStyle(
-                  color: kNavy,
+              style: TextStyle(
+                  color: isDark ? kDarkText : kNavy,
                   fontSize: 11,
                   fontWeight: FontWeight.bold)),
         ],
@@ -299,33 +312,39 @@ class _Card extends StatelessWidget {
   final Widget child;
   const _Card({required this.child});
   @override
-  Widget build(BuildContext c) => Container(
+  Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? kDarkCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2)),
-          ],
+          border: Border.all(color: isDark ? kDarkBorder : const Color(0xFFF3F4F6)),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2)),
+                ],
         ),
         child: child,
       );
+  }
 }
 
 class DonutChart extends StatelessWidget {
   final List<Map<String, dynamic>> categories;
   final int total;
-  const DonutChart({super.key, required this.categories, required this.total});
+  final bool isDark;
+  const DonutChart({super.key, required this.categories, required this.total, required this.isDark});
 
   @override
   Widget build(BuildContext c) {
     return CustomPaint(
       size: const Size(140, 140),
-      painter: _DonutPainter(categories: categories, total: total),
+      painter: _DonutPainter(categories: categories, total: total, isDark: isDark),
     );
   }
 }
@@ -333,7 +352,8 @@ class DonutChart extends StatelessWidget {
 class _DonutPainter extends CustomPainter {
   final List<Map<String, dynamic>> categories;
   final int total;
-  _DonutPainter({required this.categories, required this.total});
+  final bool isDark;
+  _DonutPainter({required this.categories, required this.total, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -358,17 +378,19 @@ class _DonutPainter extends CustomPainter {
       start += sweep;
     }
 
-    // Inner white circle
-    final inner = Paint()..color = Colors.white;
+    // Inner white/dark circle
+    final inner = Paint()..color = isDark ? kDarkCard : Colors.white;
     canvas.drawCircle(center, radius - 18, inner);
   }
 
   @override
   bool shouldRepaint(covariant _DonutPainter old) =>
-      old.categories != categories || old.total != total;
+      old.categories != categories || old.total != total || old.isDark != isDark;
 }
 
 class LineChartPainter extends CustomPainter {
+  final bool isDark;
+  LineChartPainter({required this.isDark});
   @override
   void paint(Canvas canvas, Size size) {
     final data = [18.0, 24, 31, 22, 45, 38, 52, 44, 56, 48, 62, 56];
@@ -376,7 +398,7 @@ class LineChartPainter extends CustomPainter {
     final w = size.width, h = size.height;
     final step = w / (data.length - 1);
     final grid = Paint()
-      ..color = const Color(0xFFF3F4F6)
+      ..color = isDark ? kDarkBorder : const Color(0xFFF3F4F6)
       ..strokeWidth = 1;
     for (var i = 0; i <= 3; i++) {
       final y = h * i / 3;
@@ -408,5 +430,5 @@ class LineChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
+  bool shouldRepaint(covariant LineChartPainter old) => old.isDark != isDark;
 }

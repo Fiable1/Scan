@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 import '../platform/platform_helpers.dart';
 import 'save_success_screen.dart';
 
@@ -21,6 +23,13 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
   Uint8List? coverBytes;
   String? coverName;
   bool saving = false;
+
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
 
   @override
   void initState() {
@@ -101,26 +110,30 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
 
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    final cardColor = isDark ? kDarkCard : Colors.white;
+    final border = isDark ? kDarkBorder : const Color(0xFFF3F4F6);
+    final titleColor = isDark ? kDarkText : kNavy;
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: isDark ? kDarkScaffold : kBg,
       body: Column(
         children: [
           AppHeaderBar(
             leading: AppBackButton(onPress: () => Navigator.pop(c)),
-            title: 'Book Information',
-            subtitle: 'Auto Filled from Barcode',
+            title: _t('Book Information', rw: 'Amakuru y\'igitabo', fr: 'Informations sur le livre'),
+            subtitle: _t('Auto Filled from Barcode', rw: 'Byuzuyemo ku buryo bwikora', fr: 'Rempli automatiquement depuis le code-barres'),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                   color: const Color(0xFF22C55E).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20)),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.circle, size: 6, color: Color(0xFF4ADE80)),
-                  SizedBox(width: 4),
-                  Text('Auto',
-                      style: TextStyle(
+                  const Icon(Icons.circle, size: 6, color: Color(0xFF4ADE80)),
+                  const SizedBox(width: 4),
+                  Text(_t('Auto', rw: 'Auto', fr: 'Auto'),
+                      style: const TextStyle(
                           color: Color(0xFF86EFAC),
                           fontSize: 12,
                           fontWeight: FontWeight.w500)),
@@ -154,8 +167,8 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
                             Text(title,
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: kNavy,
+                                style: TextStyle(
+                                    color: titleColor,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                     height: 1.3)),
@@ -169,13 +182,17 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
                               runSpacing: 6,
                               children: [
                                 if (category.isNotEmpty)
-                                  const _Tag('Mathematics',
-                                      bg: Color(0xFFDBEAFE),
+                                  _Tag(category,
+                                      bg: const Color(0xFFDBEAFE),
                                       fg: kAccent),
                                 if (ctrls['grade']!.text.isNotEmpty)
                                   _Tag(ctrls['grade']!.text,
-                                      bg: const Color(0xFFF3F4F6),
-                                      fg: const Color(0xFF6B7280)),
+                                      bg: isDark
+                                          ? const Color(0xFF374151)
+                                          : const Color(0xFFF3F4F6),
+                                      fg: isDark
+                                          ? kDarkTextMuted
+                                          : const Color(0xFF6B7280)),
                               ],
                             ),
                           ],
@@ -191,8 +208,8 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
                         color: kAccent, size: 20),
                     label: Text(
                         coverBytes == null
-                            ? 'Add cover photo'
-                            : 'Change cover photo',
+                            ? _t('Add cover photo', rw: 'Ongeraho ifoto y\'igifuniko', fr: 'Ajouter une photo de couverture')
+                            : _t('Change cover photo', rw: 'Hindura ifoto y\'igifuniko', fr: 'Changer la photo de couverture'),
                         style: const TextStyle(color: kAccent)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -206,9 +223,9 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFF3F4F6)),
+                      border: Border.all(color: border),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -221,14 +238,14 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
                     children: [
                       Expanded(
                           child: _labelBlock(
-                              'Quantity', FormFieldBox(controller: quantity, hint: '1'))),
+                              _t('Quantity', rw: 'Umubare', fr: 'Quantité'), FormFieldBox(controller: quantity, hint: _t('1', rw: '1', fr: '1')))),
                       const SizedBox(width: 12),
-                      Expanded(child: _labelBlock('Condition', _conditionBox())),
+                      Expanded(child: _labelBlock(_t('Condition', rw: 'Uko bimeze', fr: 'Condition'), _conditionBox())),
                     ],
                   ),
                   const SizedBox(height: 20),
                   PrimaryButton(
-                    label: saving ? 'SAVING...' : 'SAVE BOOK',
+                    label: saving ? _t('SAVING...', rw: 'KUBIKA...', fr: 'ENREGISTREMENT...') : _t('SAVE BOOK', rw: 'BUKA IGITABO', fr: 'ENREGISTRER LIVRE'),
                     onPressed: saving ? null : save,
                   ),
                 ],
@@ -240,7 +257,7 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
     );
   }
 
-  List<Widget> _fieldRows() => _fieldLabels
+  List<Widget> _fieldRows() => _fieldKeys
       .asMap()
       .entries
       .map((e) => Padding(
@@ -248,7 +265,7 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FieldLabel(e.value),
+                FieldLabel(_fieldLabels[e.key]),
                 const SizedBox(height: 6),
                 FormFieldBox(controller: ctrls[_fieldKeys[e.key]]!),
               ],
@@ -261,16 +278,20 @@ class _BookInfoScreenState extends State<BookInfoScreen> {
         children: [FieldLabel(label), const SizedBox(height: 6), child],
       );
 
-  Widget _conditionBox() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        decoration: BoxDecoration(
-          color: kFieldBg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kBorderGray),
-        ),
-        child: const Text('Good',
-            style: TextStyle(color: Color(0xFF374151), fontSize: 14)),
-      );
+  Widget _conditionBox() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      decoration: BoxDecoration(
+        color: isDark ? kDarkFieldBg : kFieldBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? kDarkBorder : kBorderGray),
+      ),
+      child: Text(_t('Good', rw: 'Nibyiza', fr: 'Bon'),
+          style: TextStyle(
+              color: isDark ? kDarkText : const Color(0xFF374151), fontSize: 14)),
+    );
+  }
 }
 
 const List<String> _fieldKeys = [

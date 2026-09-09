@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../models/book_scan.dart';
+import '../services/app_settings.dart';
 import 'scan_screen.dart';
 
 class BookDetailScreen extends StatelessWidget {
@@ -10,16 +12,26 @@ class BookDetailScreen extends StatelessWidget {
   Color get _cover =>
       coverColor('${scan.category} ${scan.title}');
 
+  String _t(BuildContext c, String en, {String? rw, String? fr}) {
+    final loc = c.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
+
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     final title = scan.title.isNotEmpty ? scan.title : scan.code;
+    final cardColor = isDark ? kDarkCard : Colors.white;
+    final border = isDark ? kDarkBorder : const Color(0xFFF3F4F6);
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: isDark ? kDarkScaffold : kBg,
       body: Column(
         children: [
           AppHeaderBar(
             leading: AppBackButton(onPress: () => Navigator.pop(c)),
-            title: 'Book Details',
+            title: _t(c, 'Book Details', rw: 'Ibirebana n\'igitabo', fr: 'Détails du livre'),
             trailing: Container(
               width: 32,
               height: 32,
@@ -42,7 +54,7 @@ class BookDetailScreen extends StatelessWidget {
                 children: [
                   // Hero
                   Container(
-                    color: kNavy,
+                    color: isDark ? kDarkCard : kNavy,
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,28 +103,36 @@ class BookDetailScreen extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: const Color(0xFFF3F4F6)),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2)),
-                          ],
+                          border: Border.all(color: border),
+                          boxShadow: isDark
+                              ? null
+                              : [
+                                  BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2)),
+                                ],
                         ),
                         child: Column(
                           children: [
-                            _row('Author',
+                            _row(c,
+                                _t(c, 'Author', rw: 'Umwanditsi', fr: 'Auteur'),
                                 scan.author.isNotEmpty ? scan.author : '—'),
-                            _row('Publisher',
+                            _row(c,
+                                _t(c, 'Publisher', rw: 'Umutangazasanduku', fr: 'Éditeur'),
                                 scan.publisher.isNotEmpty ? scan.publisher : '—'),
-                            _row('Language',
+                            _row(c,
+                                _t(c, 'Language', rw: 'Ururimi', fr: 'Langue'),
                                 scan.language.isNotEmpty ? scan.language : '—'),
-                            _row('Quantity', '1 copy'),
-                            _row('Condition', 'Good'),
-                            _lastRow('Date Added', _date()),
+                            _row(c,
+                                _t(c, 'Quantity', rw: 'Umubare', fr: 'Quantité'),
+                                '1 ${_t(c, 'copy', rw: 'igito', fr: 'copie')}'),
+                            _row(c,
+                                _t(c, 'Condition', rw: 'Uko bimeze', fr: 'Condition'),
+                                _t(c, 'Good', rw: 'Nibyiza', fr: 'Bon')),
+                            _lastRow(c, _t(c, 'Date Added', rw: 'Igihe byongeweho', fr: 'Date ajoutée'), _date()),
                           ],
                         ),
                       ),
@@ -135,8 +155,8 @@ class BookDetailScreen extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: const Text('Scan Again',
-                                  style: TextStyle(
+                              child: Text(_t(c, 'Scan Again', rw: 'Soma nanone', fr: 'Scanner à nouveau'),
+                                  style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14)),
                             ),
@@ -154,8 +174,8 @@ class BookDetailScreen extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: const Text('Edit',
-                                  style: TextStyle(
+                              child: Text(_t(c, 'Edit', rw: 'Hindura', fr: 'Modifier'),
+                                  style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14)),
                             ),
@@ -183,7 +203,9 @@ class BookDetailScreen extends StatelessWidget {
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  Widget _row(String label, String value) => Padding(
+  Widget _row(BuildContext c, String label, String value) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -191,15 +213,18 @@ class BookDetailScreen extends StatelessWidget {
             Text(label,
                 style: const TextStyle(color: kTextGray, fontSize: 12)),
             Text(value,
-                style: const TextStyle(
-                    color: kNavy,
+                style: TextStyle(
+                    color: isDark ? kDarkText : kNavy,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
           ],
         ),
       );
+  }
 
-  Widget _lastRow(String label, String value) => Padding(
+  Widget _lastRow(BuildContext c, String label, String value) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -207,13 +232,14 @@ class BookDetailScreen extends StatelessWidget {
             Text(label,
                 style: const TextStyle(color: kTextGray, fontSize: 12)),
             Text(value,
-                style: const TextStyle(
-                    color: kNavy,
+                style: TextStyle(
+                    color: isDark ? kDarkText : kNavy,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
           ],
         ),
       );
+  }
 }
 
 class _HeroTag extends StatelessWidget {

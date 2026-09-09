@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 import 'book_info_screen.dart';
 import 'home_shell.dart';
 
@@ -11,6 +13,13 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
+
   Future<void> _manualEntry() async {
     // Web-friendly manual ISBN entry that mirrors the camera scan result.
     final controller = TextEditingController();
@@ -29,9 +38,9 @@ class _ScanScreenState extends State<ScanScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Enter Barcode / ISBN',
+              Text(_t('Enter Barcode / ISBN', rw: 'Andika Barcode / ISBN', fr: 'Entrez code-barres / ISBN'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
@@ -51,7 +60,7 @@ class _ScanScreenState extends State<ScanScreen> {
               ),
               const SizedBox(height: 16),
               PrimaryButton(
-                label: 'LOOKUP BOOK',
+                label: _t('LOOKUP BOOK', rw: 'SHAKISHA IGITABO', fr: 'RECHERCHER LIVRE'),
                 onPressed: () =>
                     Navigator.pop(c, controller.text.trim()),
               ),
@@ -83,6 +92,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: kDarkBg,
       body: Column(
@@ -99,9 +109,9 @@ class _ScanScreenState extends State<ScanScreen> {
                       MaterialPageRoute(builder: (_) => const HomeShell()));
                 }),
                 const SizedBox(width: 8),
-                const Expanded(
-                  child: Text('Scan Barcode',
-                      style: TextStyle(
+                Expanded(
+                  child: Text(_t('Scan Barcode', rw: 'Soma barcode', fr: 'Scanner le code-barres'),
+                      style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
@@ -144,8 +154,8 @@ class _ScanScreenState extends State<ScanScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Align barcode within the frame',
-                            style: TextStyle(
+                        Text(_t('Align barcode within the frame', rw: 'Shyira barcode mu kazu', fr: 'Alignez le code-barres dans le cadre'),
+                            style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500)),
@@ -234,10 +244,10 @@ class _ScanScreenState extends State<ScanScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        const Text(
-                          'Position the barcode clearly within the frame',
+                        Text(
+                          _t('Position the barcode clearly within the frame', rw: 'Shyira barcode neza mu kazu', fr: 'Positionnez clairement le code-barres dans le cadre'),
                           style: TextStyle(
-                              color: kTextGray, fontSize: 12),
+                              color: isDark ? kDarkTextMuted : kTextGray, fontSize: 12),
                         ),
                         const SizedBox(height: 16),
                         GestureDetector(
@@ -249,8 +259,8 @@ class _ScanScreenState extends State<ScanScreen> {
                               color: Colors.white.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            child: const Text('Enter ISBN manually',
-                                style: TextStyle(
+                            child: Text(_t('Enter ISBN manually', rw: 'Andika ISBN mu buryo bw\'amaboko', fr: 'Saisir l\'ISBN manuellement'),
+                                style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500)),
@@ -270,7 +280,7 @@ class _ScanScreenState extends State<ScanScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _ActionButton(Icons.photo_outlined, 'Gallery', onTap: _manualEntry),
+                _ActionButton(Icons.photo_outlined, _t('Gallery', rw: 'Igifuniko', fr: 'Galerie'), onTap: _manualEntry),
                 GestureDetector(
                   onTap: _manualEntry,
                   child: Column(
@@ -299,15 +309,15 @@ class _ScanScreenState extends State<ScanScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text('Capture',
-                          style: TextStyle(
+                      Text(_t('Capture', rw: 'Fata', fr: 'Capturer'),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
-                _ActionButton(Icons.help_outline, 'How to scan?', onTap: _manualEntry),
+                _ActionButton(Icons.help_outline, _t('How to scan?', rw: 'Nigute wasoma?', fr: 'Comment scanner?'), onTap: _manualEntry),
               ],
             ),
           ),

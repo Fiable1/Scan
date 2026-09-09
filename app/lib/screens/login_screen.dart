@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 import 'register_screen.dart';
 import 'home_shell.dart';
 
@@ -15,6 +17,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final password = TextEditingController();
   bool loading = false;
   bool obscure = true;
+
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
 
   Future<void> go() async {
     setState(() => loading = true);
@@ -40,14 +49,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    final bgColor = isDark ? kDarkScaffold : Colors.white;
+    final titleColor = isDark ? kDarkText : kNavy;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Dark header block
           Container(
-            color: kNavy,
+            color: isDark ? kDarkCard : kNavy,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
               children: [
@@ -64,15 +76,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('RWANDA SCHOOL BOOK SCANNER',
-                          style: TextStyle(
+                    children: [
+                      Text(_t('RWANDA SCHOOL BOOK SCANNER', rw: 'IMASHINI ISOMA IBITABO BY\'IZIKURU', fr: 'SCANNER DE LIVRES SCOLAIRES DU RWANDA'),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 13)),
-                      Text('Digital Library Management',
+                      Text(_t('Digital Library Management', rw: 'Gucunga ububiko bwa digitale', fr: 'Gestion de bibliothèque numérique'),
                           style:
-                              TextStyle(color: Color(0xFF93C5FD), fontSize: 12)),
+                              const TextStyle(color: Color(0xFF93C5FD), fontSize: 12)),
                     ],
                   ),
                 ),
@@ -102,38 +114,38 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Welcome Back!',
+                    Text(
+                      _t('Welcome Back!', rw: 'Murakaza neza!', fr: 'Bon retour!'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          color: kNavy,
+                          color: titleColor,
                           fontSize: 24,
                           fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Sign in to your librarian account',
+                    Text(
+                      _t('Sign in to your librarian account', rw: 'Injira muri konti yawe ya umuyobozi w\'ububiko', fr: 'Connectez-vous à votre compte de bibliothécaire'),
                       textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: kTextGray, fontSize: 14),
+                      style: TextStyle(
+                          color: isDark ? kDarkTextMuted : kTextGray, fontSize: 14),
                     ),
                     const SizedBox(height: 28),
-                    const FieldLabel('Email or Phone'),
+                    FieldLabel(_t('Email or Phone', rw: 'Imeyili cyangwa Telefone', fr: 'E-mail ou téléphone')),
                     const SizedBox(height: 6),
                     FormFieldBox(
                       controller: email,
-                      hint: 'Enter email or phone',
+                      hint: _t('Enter email or phone', rw: 'Andika imeyili cyangwa telefone', fr: 'Entrez l\'e-mail ou le téléphone'),
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Required'
+                          ? _t('Required', rw: 'Birakenewe', fr: 'Requis')
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    const FieldLabel('Password'),
+                    FieldLabel(_t('Password', rw: 'Ijambobanga', fr: 'Mot de passe')),
                     const SizedBox(height: 6),
                     FormFieldBox(
                       controller: password,
-                      hint: 'Enter password',
+                      hint: _t('Enter password', rw: 'Andika ijambobanga', fr: 'Entrez le mot de passe'),
                       obscure: obscure,
                       suffix: IconButton(
                         onPressed: () => setState(() => obscure = !obscure),
@@ -146,15 +158,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Required' : null,
+                          (v == null || v.isEmpty) ? _t('Required', rw: 'Birakenewe', fr: 'Requis') : null,
                     ),
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {},
-                        child: const Text('Forgot password?',
-                            style: TextStyle(
+                        child: Text(_t('Forgot password?', rw: 'Wibagiwe ijambobanga?', fr: 'Mot de passe oublié?'),
+                            style: const TextStyle(
                                 color: kAccent,
                                 fontWeight: FontWeight.w500,
                                 fontSize: 12)),
@@ -162,23 +174,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     PrimaryButton(
-                      label: loading ? 'SIGNING IN...' : 'LOGIN',
+                      label: loading ? _t('SIGNING IN...', rw: 'KUWINJIRA...', fr: 'CONNEXION EN COURS...') : _t('LOGIN', rw: 'INJIRA', fr: 'CONNEXION'),
                       onPressed: loading ? null : go,
                     ),
                     const SizedBox(height: 40),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Don\'t have an account?',
-                            style:
-                                TextStyle(color: kTextGray, fontSize: 14)),
+                        Text(_t('Don\'t have an account?', rw: 'Nta konti ufite?', fr: 'Pas de compte?'),
+                            style: TextStyle(
+                                color: isDark ? kDarkTextMuted : kTextGray, fontSize: 14)),
                         TextButton(
                           onPressed: () =>
                               Navigator.push(c,
                                   MaterialPageRoute(
                                       builder: (_) => const RegisterScreen())),
-                          child: const Text('Register as a Librarian',
-                              style: TextStyle(
+                          child: Text(_t('Register as a Librarian', rw: 'Iyandikishe nk\'umuyobozi w\'ububiko', fr: 'Inscrivez-vous comme bibliothécaire'),
+                              style: const TextStyle(
                                   color: kAccent,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600)),

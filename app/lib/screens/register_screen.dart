@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 import 'login_screen.dart';
 import 'home_shell.dart';
 
@@ -21,6 +23,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool confirm = false;
   bool submitting = false;
 
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,8 +45,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> register() async {
     if (!confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please confirm you are the school librarian.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_t('Please confirm you are the school librarian.', rw: 'Nyamuneka emeza ko uri umuyobozi w\'ububiko bw\'ishuri.', fr: 'Veuillez confirmer que vous êtes le bibliothécaire de l\'école.'))));
       return;
     }
     setState(() => submitting = true);
@@ -68,12 +77,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    final bgColor = isDark ? kDarkScaffold : Colors.white;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor,
       body: Column(
         children: [
           Container(
-            color: kNavy,
+            color: isDark ? kDarkCard : kNavy,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
               children: [
@@ -91,15 +102,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Librarian Registration',
-                          style: TextStyle(
+                    children: [
+                      Text(_t('Librarian Registration', rw: 'Iyandikisha ry\'umuyobozi w\'ububiko', fr: 'Inscription du bibliothécaire'),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 14)),
-                      Text('For Rwandan Schools Only',
+                      Text(_t('For Rwandan Schools Only', rw: 'Ibikorwa by\'amashuri y\'u Rwanda Gusa', fr: 'Uniquement pour les écoles rwandaises'),
                           style:
-                              TextStyle(color: Color(0xFF93C5FD), fontSize: 12)),
+                              const TextStyle(color: Color(0xFF93C5FD), fontSize: 12)),
                     ],
                   ),
                 ),
@@ -112,21 +123,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const FieldLabel('Full Name'),
+                  FieldLabel(_t('Full Name', rw: 'Amazina yuzuye', fr: 'Nom complet')),
                   const SizedBox(height: 6),
                   FormFieldBox(
-                      controller: name, hint: 'Enter full name',
+                      controller: name, hint: _t('Enter full name', rw: 'Andika amazina yuzuye', fr: 'Entrez le nom complet'),
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Required' : null),
+                          (v == null || v.trim().isEmpty) ? _t('Required', rw: 'Birakenewe', fr: 'Requis') : null),
                   const SizedBox(height: 16),
-                  const FieldLabel('Email'),
+                  FieldLabel(_t('Email', rw: 'Imeyili', fr: 'E-mail')),
                   const SizedBox(height: 6),
                   FormFieldBox(
                       controller: email,
-                      hint: 'Enter email',
+                      hint: _t('Enter email', rw: 'Andika imeyili', fr: 'Entrez l\'e-mail'),
                       keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 16),
-                  const FieldLabel('Phone Number'),
+                  FieldLabel(_t('Phone Number', rw: 'Nomero ya telefone', fr: 'Numéro de téléphone')),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -134,9 +145,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 15),
                         decoration: BoxDecoration(
-                          color: kFieldBg,
+                          color: isDark ? kDarkFieldBg : kFieldBg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: kBorderGray),
+                          border: Border.all(
+                              color: isDark ? kDarkBorder : kBorderGray),
                         ),
                         child: const Row(
                           children: [
@@ -160,27 +172,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const FieldLabel('District'),
+                  FieldLabel(_t('District', rw: 'Ukarere', fr: 'District')),
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: kFieldBg,
+                      color: isDark ? kDarkFieldBg : kFieldBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: kBorderGray),
+                      border: Border.all(
+                          color: isDark ? kDarkBorder : kBorderGray),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: district,
                         isExpanded: true,
-                        hint: const Text('Select district',
+                        hint: Text(_t('Select district', rw: 'Hitamo akarere', fr: 'Sélectionnez le district'),
                             style: TextStyle(color: kTextGray, fontSize: 14)),
                         items: districts
                             .map((d) => DropdownMenuItem(
                                 value: d,
                                 child: Text(d,
-                                    style: const TextStyle(
-                                        color: Color(0xFF374151),
+                                    style: TextStyle(
+                                        color: isDark ? kDarkText : const Color(0xFF374151),
                                         fontSize: 14))))
                             .toList(),
                         onChanged: (v) => setState(() => district = v),
@@ -188,16 +201,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const FieldLabel('School Name'),
+                  FieldLabel(_t('School Name', rw: 'Izina ry\'ishuri', fr: 'Nom de l\'école')),
                   const SizedBox(height: 6),
                   FormFieldBox(
-                      controller: school, hint: 'Enter your school'),
+                      controller: school, hint: _t('Enter your school', rw: 'Andika ishuri ryawe', fr: 'Entrez votre école')),
                   const SizedBox(height: 16),
-                  const FieldLabel('Password'),
+                  FieldLabel(_t('Password', rw: 'Ijambobanga', fr: 'Mot de passe')),
                   const SizedBox(height: 6),
                   FormFieldBox(
                       controller: password,
-                      hint: 'Enter password',
+                      hint: _t('Enter password', rw: 'Andika ijambobanga', fr: 'Entrez le mot de passe'),
                       obscure: true),
                   const SizedBox(height: 8),
                   InkWell(
@@ -221,11 +234,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               : null,
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'I confirm that I am the librarian of the above school',
+                            _t('I confirm that I am the librarian of the above school', rw: 'Ndemezako ndi umuyobozi w\'ububiko bw\'ishuri ryavuzwe', fr: 'Je confirme que je suis le bibliothécaire de l\'école ci-dessus'),
                             style: TextStyle(
-                                color: Color(0xFF6B7280),
+                                color: isDark ? kDarkTextMuted : const Color(0xFF6B7280),
                                 fontSize: 12,
                                 height: 1.4),
                           ),
@@ -235,20 +248,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
                   PrimaryButton(
-                    label: submitting ? 'REGISTERING...' : 'REGISTER',
+                    label: submitting ? _t('REGISTERING...', rw: 'KUYANDIKISHA...', fr: 'INSCRIPTION...') : _t('REGISTER', rw: 'IYANDIKISHE', fr: 'S\'INSCRIRE'),
                     onPressed: submitting ? null : register,
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Already have an account?',
-                          style: TextStyle(color: kTextGray, fontSize: 14)),
+                      Text(_t('Already have an account?', rw: 'Ufite konti?', fr: 'Déjà un compte?'),
+                          style: TextStyle(
+                              color: isDark ? kDarkTextMuted : kTextGray, fontSize: 14)),
                       TextButton(
                         onPressed: () =>
                             Navigator.pop(c, const LoginScreen()),
-                        child: const Text('Login',
-                            style: TextStyle(
+                        child: Text(_t('Login', rw: 'Injira', fr: 'Connexion'),
+                            style: const TextStyle(
                                 color: kAccent,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600)),

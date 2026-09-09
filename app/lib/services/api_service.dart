@@ -6,7 +6,7 @@ import '../models/book_scan.dart';
 class ApiService {
   static const _urlKey = 'backend_url', _tokenKey = 'auth_token';
 
-  static const String deployedBaseUrl = 'https://backend-ashen-kappa-32.vercel.app';
+  static const String deployedBaseUrl = 'http://localhost:5000';
 
   static Future<String> baseUrl() async {
     final p = await SharedPreferences.getInstance();

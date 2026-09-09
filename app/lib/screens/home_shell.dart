@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 import 'books_list_screen.dart';
 import 'scan_screen.dart';
 import 'analytics_screen.dart';
@@ -55,8 +57,9 @@ class _HomeShellState extends State<HomeShell> {
       'export' => const ExportScreen(key: ValueKey('export')),
       _ => const SizedBox(),
     };
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: isDark ? kDarkScaffold : kBg,
       body: Stack(
         children: [
           body,
@@ -114,18 +117,27 @@ class _DashboardState extends State<Dashboard> {
     return s.toUpperCase();
   }
 
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
+
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     final total = data?['total_books']?.toString() ?? '1,248';
     final today = data?['today']?.toString() ?? '56';
     final school = widget.school ?? 'MUNEZERO Flaibe';
+    final titleColor = isDark ? kDarkText : kNavy;
     return Column(
       children: [
         // Header
         Stack(
           children: [
             Container(
-              color: kNavy,
+              color: isDark ? kDarkCard : kNavy,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
               child: Column(
                 children: [
@@ -133,9 +145,9 @@ class _DashboardState extends State<Dashboard> {
                     children: [
                       const _Hamburger(),
                       const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text('Dashboard',
-                            style: TextStyle(
+                      Expanded(
+                        child: Text(_t('Dashboard', rw: 'Ikibaho gikuru', fr: 'Tableau de bord'),
+                            style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18)),
@@ -176,8 +188,8 @@ class _DashboardState extends State<Dashboard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Good morning,',
-                                style: TextStyle(
+                            Text(_t('Good morning,', rw: 'Mwaramutse,', fr: 'Bonjour,'),
+                                style: const TextStyle(
                                     color: Color(0xFF93C5FD), fontSize: 12)),
                             Text(school,
                                 style: const TextStyle(
@@ -185,7 +197,7 @@ class _DashboardState extends State<Dashboard> {
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15)),
                             Text(
-                              'Librarian${(widget.group?.isNotEmpty ?? false) ? ': ${widget.group?.toUpperCase() ?? ''}' : ''}',
+                              '${_t('Librarian', rw: 'Umuyobozi w\'ububiko', fr: 'Bibliothécaire')}${(widget.group?.isNotEmpty ?? false) ? ': ${widget.group?.toUpperCase() ?? ''}' : ''}',
                               style: const TextStyle(
                                   color: Color(0xFF93C5FD), fontSize: 12),
                             ),
@@ -224,12 +236,12 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Expanded(
                       child: _StatCard.navy(
-                          'Total Books Scanned', total, '+12%', 'this month'),
+                          _t('Total Books Scanned', rw: 'Ibitabo byose byasomwe', fr: 'Total de livres scannés'), total, '+12%', _t('this month', rw: 'ukwezi gushize', fr: 'ce mois')),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard.blue(
-                          'Today\'s Books', today, '+8', 'from yesterday'),
+                          _t('Today\'s Books', rw: 'Ibitabo bya Uyu Munsi', fr: 'Livres du jour'), today, '+8', _t('from yesterday', rw: 'uwa ejo', fr: 'depuis hier')),
                     ),
                   ],
                 ),
@@ -238,11 +250,11 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Expanded(
                       child: _StatCard.white(
-                          'Total Apps', '1,248'),
+                          _t('Total Apps', rw: 'Porogaramu zose', fr: 'Total d\'applications'), '1,248'),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _StatCard.white('Data in System', '1,248'),
+                      child: _StatCard.white(_t('Data in System', rw: 'Amakuru mu sisitemu', fr: 'Données dans le système'), '1,248'),
                     ),
                   ],
                 ),
@@ -250,17 +262,17 @@ class _DashboardState extends State<Dashboard> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Recent Scans',
+                    Text(_t('Recent Scans', rw: 'Ibyasomwe biheruka', fr: 'Analyses récentes'),
                         style: TextStyle(
-                            color: kNavy,
+                            color: titleColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
                     TextButton(
                       onPressed: () => setState(() {
                         _go(c, const BooksListScreen());
                       }),
-                      child: const Text('View all',
-                          style: TextStyle(
+                      child: Text(_t('View all', rw: 'Reba byose', fr: 'Voir tout'),
+                          style: const TextStyle(
                               color: kAccent,
                               fontSize: 12,
                               fontWeight: FontWeight.w600)),
@@ -269,9 +281,9 @@ class _DashboardState extends State<Dashboard> {
                 ),
                 ..._recentList(c),
                 const SizedBox(height: 16),
-                const Text('Quick Actions',
+                Text(_t('Quick Actions', rw: 'Ibikorwa byihuse', fr: 'Actions rapides'),
                     style: TextStyle(
-                        color: kNavy,
+                        color: titleColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 14)),
                 const SizedBox(height: 12),
@@ -279,15 +291,15 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Expanded(
                         child: _QuickAction(
-                            '📷', 'Scan Book',
+                            '📷', _t('Scan Book', rw: 'Soma igitabo', fr: 'Scanner un livre'),
                             () => _go(c, const ScanScreen()))),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: _QuickAction('📚', 'View Books',
+                        child: _QuickAction('📚', _t('View Books', rw: 'Reba ibitabo', fr: 'Voir les livres'),
                             () => _go(c, const BooksListScreen()))),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: _QuickAction('📄', 'Export',
+                        child: _QuickAction('📄', _t('Export', rw: 'Ohereza hanze', fr: 'Exporter'),
                             () => _go(c, const ExportScreen()))),
                   ],
                 ),
@@ -300,6 +312,7 @@ class _DashboardState extends State<Dashboard> {
   }
 
   List<Widget> _recentList(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     if (recent.isEmpty) {
       final fallback = [
         {'title': 'New Oxford Primary Mathematics 6', 'isbn': '9780199386429', 'grade': 'Primary 6 • Mathematics', 'color': '#1a3a6b'},
@@ -312,7 +325,8 @@ class _DashboardState extends State<Dashboard> {
               isbn: 'ISBN: ${b['isbn']}',
               grade: b['grade']!,
               color: Color(int.parse('FF${b['color']!.substring(1)}',
-                  radix: 16))))
+                  radix: 16)),
+              isDark: isDark))
           .toList();
     }
     return recent
@@ -325,6 +339,7 @@ class _DashboardState extends State<Dashboard> {
               grade:
                   '${b['grade'] ?? ''} • ${b['category'] ?? ''}'.trim(),
               color: coverColor(b['title']?.toString() ?? ''),
+              isDark: isDark,
             ))
         .toList();
   }
@@ -383,14 +398,15 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
-    final isDark = dark || blueCard;
-    final bg = blueCard ? kAccent : (dark ? kNavy : Colors.white);
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    final isDarkCard = dark || blueCard;
+    final bg = blueCard ? kAccent : (dark ? kNavy : (isDark ? kDarkCard : Colors.white));
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: whiteCard
+        boxShadow: whiteCard && !isDark
             ? [
                 BoxShadow(
                     color: Colors.black.withOpacity(0.04),
@@ -398,7 +414,11 @@ class _StatCard extends StatelessWidget {
                     offset: const Offset(0, 2)),
               ]
             : null,
-        border: whiteCard ? Border.all(color: const Color(0xFFF3F4F6)) : null,
+        border: (whiteCard && isDark)
+            ? Border.all(color: kDarkBorder)
+            : whiteCard
+                ? Border.all(color: const Color(0xFFF3F4F6))
+                : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,7 +428,7 @@ class _StatCard extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.6,
-                  color: isDark
+                  color: isDarkCard
                       ? (blueCard
                           ? const Color(0xFFDBEAFE)
                           : const Color(0xFF93C5FD))
@@ -418,7 +438,7 @@ class _StatCard extends StatelessWidget {
               style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
-                  color: isDark ? Colors.white : kNavy)),
+                  color: isDarkCard ? Colors.white : (isDark ? kDarkText : kNavy))),
           if (!whiteCard)
             Row(
               children: [
@@ -428,7 +448,7 @@ class _StatCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(sub2,
                     style: TextStyle(
-                        color: isDark
+                        color: isDarkCard
                             ? (blueCard
                                 ? const Color(0xFFBFDBFE)
                                 : const Color(0xFF93C5FD))
@@ -445,25 +465,29 @@ class _StatCard extends StatelessWidget {
 class _RecentTile extends StatelessWidget {
   final String title, isbn, grade;
   final Color color;
+  final bool isDark;
   const _RecentTile(
       {required this.title,
       required this.isbn,
       required this.grade,
-      required this.color});
+      required this.color,
+      required this.isDark});
   @override
   Widget build(BuildContext c) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? kDarkCard : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2)),
-          ],
+          border: Border.all(color: isDark ? kDarkBorder : const Color(0xFFF3F4F6)),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2)),
+                ],
         ),
         child: Row(
           children: [
@@ -486,8 +510,8 @@ class _RecentTile extends StatelessWidget {
                   Text(title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: kNavy,
+                      style: TextStyle(
+                          color: isDark ? kDarkText : kNavy,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                           height: 1.3)),
@@ -502,7 +526,7 @@ class _RecentTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: kTextGray, size: 18),
+            Icon(Icons.chevron_right, color: kTextGray, size: 18),
           ],
         ),
       );
@@ -513,35 +537,40 @@ class _QuickAction extends StatelessWidget {
   final VoidCallback onTap;
   const _QuickAction(this.emoji, this.label, this.onTap);
   @override
-  Widget build(BuildContext c) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFF3F4F6)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 26)),
-              const SizedBox(height: 6),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280))),
-            ],
-          ),
+  Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? kDarkCard : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? kDarkBorder : const Color(0xFFF3F4F6)),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2)),
+                ],
         ),
-      );
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 26)),
+            const SizedBox(height: 6),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? kDarkTextMuted : const Color(0xFF6B7280))),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _SmallBook extends CustomPainter {

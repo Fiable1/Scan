@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../services/app_settings.dart';
 import '../models/book_scan.dart';
 import 'scan_screen.dart';
 import 'book_detail_screen.dart';
@@ -16,6 +18,13 @@ class _BooksListScreenState extends State<BooksListScreen> {
   bool loading = true;
   final _q = TextEditingController();
   String query = '';
+
+  String _t(String en, {String? rw, String? fr}) {
+    final loc = context.read<AppSettings>().locale;
+    if (loc == 'rw' && rw != null) return rw;
+    if (loc == 'fr' && fr != null) return fr;
+    return en;
+  }
 
   @override
   void initState() {
@@ -36,20 +45,21 @@ class _BooksListScreenState extends State<BooksListScreen> {
 
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: isDark ? kDarkScaffold : kBg,
       body: Column(
         children: [
           Container(
-            color: kNavy,
+            color: isDark ? kDarkCard : kNavy,
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
             child: Column(
               children: [
                 Row(
                   children: [
-                    const Expanded(
-                      child: Text('Books Library',
-                          style: TextStyle(
+                    Expanded(
+                      child: Text(_t('Books Library', rw: 'Ububiko bw\'ibitabo', fr: 'Bibliothèque de livres'),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 16)),
@@ -63,8 +73,8 @@ class _BooksListScreenState extends State<BooksListScreen> {
                         decoration: BoxDecoration(
                             color: kAccent,
                             borderRadius: BorderRadius.circular(20)),
-                        child: const Text('+ Scan',
-                            style: TextStyle(
+                        child: Text(_t('+ Scan', rw: '+ Soma', fr: '+ Scanner'),
+                            style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold)),
@@ -81,7 +91,7 @@ class _BooksListScreenState extends State<BooksListScreen> {
                   },
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Search books...',
+                    hintText: _t('Search books...', rw: 'Shakisha ibitabo...', fr: 'Rechercher des livres...'),
                     hintStyle: const TextStyle(color: Color(0xFF93C5FD)),
                     suffixIcon: const Padding(
                         padding: EdgeInsets.all(12),
@@ -111,19 +121,19 @@ class _BooksListScreenState extends State<BooksListScreen> {
                       padding: const EdgeInsets.all(16),
                       children: [
                         Text(
-                            '${scans.length} books found',
+                            '${scans.length} ${_t('books found', rw: 'ibitabo bibonetse', fr: 'livres trouvés')}',
                             style: const TextStyle(
                                 color: kTextGray,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 10),
                         if (scans.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 60),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 60),
                             child: Center(
-                                child: Text('No books yet. Scan your first book!',
-                                    style:
-                                        TextStyle(color: kTextGray))),
+                                child: Text(_t('No books yet. Scan your first book!', rw: 'Nta bitabo bihari. Soma igitabo cyawe cya mbere!', fr: 'Pas encore de livres. Scannez votre premier livre!'),
+                                    style: TextStyle(
+                                        color: isDark ? kDarkTextMuted : kTextGray))),
                           ),
                         ...scans.map((s) => _BookTile(scan: s)),
                       ],
@@ -141,6 +151,7 @@ class _BookTile extends StatelessWidget {
   const _BookTile({required this.scan});
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     final title = scan.title.isNotEmpty ? scan.title : scan.code;
     final color = coverColor('${scan.category} $title');
     return GestureDetector(
@@ -150,15 +161,17 @@ class _BookTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? kDarkCard : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2)),
-          ],
+          border: Border.all(color: isDark ? kDarkBorder : const Color(0xFFF3F4F6)),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2)),
+                ],
         ),
         child: Row(
           children: [
@@ -180,8 +193,8 @@ class _BookTile extends StatelessWidget {
                   Text(title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: kNavy,
+                      style: TextStyle(
+                          color: isDark ? kDarkText : kNavy,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                           height: 1.3)),
@@ -212,11 +225,15 @@ class _BookTile extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
+                              color: isDark
+                                  ? const Color(0xFF374151)
+                                  : const Color(0xFFF3F4F6),
                               borderRadius: BorderRadius.circular(8)),
                           child: Text(scan.grade,
-                              style: const TextStyle(
-                                  color: Color(0xFF6B7280),
+                              style: TextStyle(
+                                  color: isDark
+                                      ? kDarkTextMuted
+                                      : const Color(0xFF6B7280),
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500)),
                         ),

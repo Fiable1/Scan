@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'services/app_settings.dart';
 
 const Color kNavy = Color(0xFF0B2154);
 const Color kAccent = Color(0xFF2563EB);
@@ -13,6 +16,74 @@ const Color kBorderGray = Color(0xFFD1D5DB);
 const Color kInactiveGray = Color(0xFF9CA3AF);
 const Color kBg = Color(0xFFF9FAFB);
 
+/// Dark theme colors
+const Color kDarkScaffold = Color(0xFF111827);
+const Color kDarkCard = Color(0xFF1F2937);
+const Color kDarkBorder = Color(0xFF374151);
+const Color kDarkText = Color(0xFFF9FAFB);
+const Color kDarkTextMuted = Color(0xFF9CA3AF);
+const Color kDarkFieldBg = Color(0xFF1F2937);
+
+class AppTheme {
+  static ThemeData light() => _build(const ColorScheme.light(
+        primary: kNavy,
+        secondary: kAccent,
+        surface: Colors.white,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+      ));
+
+  static ThemeData dark() => _build(const ColorScheme.dark(
+        primary: kAccent,
+        secondary: Color(0xFF60A5FA),
+        surface: kDarkCard,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+      ), dark: true);
+
+  static ThemeData _build(ColorScheme colorScheme, {bool dark = false}) {
+    final isDark = dark;
+    final bg = isDark ? kDarkScaffold : kBg;
+    final cardBg = isDark ? kDarkCard : Colors.white;
+    final border = isDark ? kDarkBorder : const Color(0xFFF3F4F6);
+    final fieldBg = isDark ? kDarkFieldBg : kFieldBg;
+    final inputText = isDark ? kDarkText : const Color(0xFF374151);
+    final muted = isDark ? kDarkTextMuted : kTextGray;
+    final navyText = isDark ? kDarkText : kNavy;
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: bg,
+      fontFamily: 'Arial',
+      appBarTheme: AppBarTheme(
+        backgroundColor: isDark ? kDarkCard : kNavy,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: fieldBg,
+      ),
+      cardTheme: CardThemeData(
+        color: cardBg,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: border),
+        ),
+      ),
+      dividerTheme: DividerThemeData(color: border),
+      textTheme: TextTheme(
+        bodyLarge: TextStyle(color: inputText),
+        bodyMedium: TextStyle(color: inputText),
+        bodySmall: TextStyle(color: muted),
+        titleMedium: TextStyle(color: navyText),
+      ),
+    );
+  }
+}
+
 /// The status bar shown on top of most screens (9:41 + signal + battery).
 class StatusBar extends StatelessWidget {
   const StatusBar({super.key, this.dark = false});
@@ -21,7 +92,7 @@ class StatusBar extends StatelessWidget {
   Widget build(BuildContext c) {
     return Container(
       height: 40,
-      color: dark ? Colors.black.withOpacity(0.5) : kNavy,
+      color: dark ? Colors.black.withOpacity(0.5) : Colors.black.withOpacity(0.4),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
@@ -91,8 +162,9 @@ class AppHeaderBar extends StatelessWidget {
   final bool center;
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     return Container(
-      color: kNavy,
+      color: isDark ? kDarkCard : kNavy,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
         children: [
@@ -217,38 +289,44 @@ class FormFieldBox extends StatelessWidget {
   final Widget? suffix;
   final FormFieldValidator<String>? validator;
   @override
-  Widget build(BuildContext c) => TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscure ?? false,
-        validator: validator,
-        style: const TextStyle(color: Color(0xFF374151), fontSize: 14),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: kTextGray),
-          filled: true,
-          fillColor: kFieldBg,
-          suffixIcon: suffix,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kBorderGray),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kAccent),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.redAccent),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.redAccent),
-          ),
+  Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    final fieldBg = isDark ? kDarkFieldBg : kFieldBg;
+    final borderC = isDark ? kDarkBorder : kBorderGray;
+    final txt = isDark ? kDarkText : const Color(0xFF374151);
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure ?? false,
+      validator: validator,
+      style: TextStyle(color: txt, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: kTextGray),
+        filled: true,
+        fillColor: fieldBg,
+        suffixIcon: suffix,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderC),
         ),
-      );
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: kAccent),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+      ),
+    );
+  }
 }
 
 /// Small uppercase field label (e.g. "Email or Phone").
@@ -256,14 +334,17 @@ class FieldLabel extends StatelessWidget {
   const FieldLabel(this.text, {super.key});
   final String text;
   @override
-  Widget build(BuildContext c) => Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-            color: Color(0xFF6B7280),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.6),
-      );
+  Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
+    return Text(
+      text.toUpperCase(),
+      style: TextStyle(
+          color: isDark ? kDarkTextMuted : const Color(0xFF6B7280),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6),
+    );
+  }
 }
 
 /// Big rounded primary button (navy).
@@ -312,26 +393,49 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
+    final isDark = Theme.of(c).brightness == Brightness.dark;
     return Positioned(
       left: 0,
       right: 0,
       bottom: 0,
       child: Container(
         height: 68,
-        color: Colors.white,
+        color: isDark ? kDarkCard : Colors.white,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _item('dashboard', 'Dashboard', _dashboardIcon(active == 'dashboard'), () => onNavigate('dashboard')),
-            _item('books', 'Books', _booksIcon(active == 'books'), () => onNavigate('books')),
-            _scanCenter(),
-            _item('analytics', 'Reports', _reportIcon(active == 'analytics'), () => onNavigate('analytics')),
-            _item('export', 'More', _moreIcon(active == 'export'), () => onNavigate('export')),
+            _item('dashboard', _t(c, 'Dashboard'), _dashboardIcon(c, active == 'dashboard'), () => onNavigate('dashboard')),
+            _item('books', _t(c, 'Books'), _booksIcon(c, active == 'books'), () => onNavigate('books')),
+            _scanCenter(c),
+            _item('analytics', _t(c, 'Reports'), _reportIcon(c, active == 'analytics'), () => onNavigate('analytics')),
+            _item('export', _t(c, 'More'), _moreIcon(c, active == 'export'), () => onNavigate('export')),
           ],
         ),
       ),
     );
+  }
+
+  String _t(BuildContext c, String key) => _translate(c.read<AppSettings>().locale, key);
+
+  String _translate(String code, String en) {
+    final rw = {
+      'Dashboard': 'Ikibaho gikuru',
+      'Books': 'Ibitabo',
+      'Reports': 'Raporo',
+      'More': 'Ibindi',
+      'Scan': 'Soma',
+    };
+    final fr = {
+      'Dashboard': 'Tableau de bord',
+      'Books': 'Livres',
+      'Reports': 'Rapports',
+      'More': 'Plus',
+      'Scan': 'Scanner',
+    };
+    if (code == 'rw') return rw[en] ?? en;
+    if (code == 'fr') return fr[en] ?? en;
+    return en;
   }
 
   Widget _item(String id, String label, Widget icon, VoidCallback onTap) {
@@ -353,7 +457,7 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _scanCenter() => GestureDetector(
+  Widget _scanCenter(BuildContext c) => GestureDetector(
         onTap: () => onNavigate('scan'),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -381,7 +485,7 @@ class BottomNavBar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 3),
-            Text('Scan',
+            Text(_t(c, 'Scan'),
                 style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -390,7 +494,7 @@ class BottomNavBar extends StatelessWidget {
         ),
       );
 
-  Widget _dashboardIcon(bool on) {
+  Widget _dashboardIcon(BuildContext c, bool on) {
     final col = on ? kAccent : kInactiveGray;
     return SizedBox(
       width: 22,
@@ -399,7 +503,7 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _booksIcon(bool on) {
+  Widget _booksIcon(BuildContext c, bool on) {
     final col = on ? kAccent : kInactiveGray;
     return SizedBox(
       width: 22,
@@ -408,7 +512,7 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _reportIcon(bool on) {
+  Widget _reportIcon(BuildContext c, bool on) {
     final col = on ? kAccent : kInactiveGray;
     return SizedBox(
       width: 22,
@@ -417,7 +521,7 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _moreIcon(bool on) {
+  Widget _moreIcon(BuildContext c, bool on) {
     final col = on ? kAccent : kInactiveGray;
     return SizedBox(
       width: 22,
