@@ -6,7 +6,7 @@ import '../models/book_scan.dart';
 class ApiService {
   static const _urlKey = 'backend_url', _tokenKey = 'auth_token';
 
-  static const String deployedBaseUrl = 'https://backend-express-pied.vercel.app';
+  static const String deployedBaseUrl = 'https://rwanda-school-book-scanner.onrender.com';
 
   static String? _resolved;
 

@@ -1,0 +1,6 @@
+node_modules/
+media/
+staticfiles/
+__pycache__/
+*.pyc
+*.pyo
