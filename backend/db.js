@@ -1,7 +1,11 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const { BookCatalog } = require('./models');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rwanda_school_book_scanner';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is not set');
+}
 
 let cached = null;
 
