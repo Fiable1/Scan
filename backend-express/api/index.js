@@ -1,6 +1,6 @@
 require('dotenv').config();
 const app = require('../server');
-const connectDB = require('../db');
+const connectDB = require('../db.js');
 
 module.exports = async function handler(req, res) {
   try {
