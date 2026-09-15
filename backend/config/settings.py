@@ -1,7 +1,11 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
@@ -57,33 +61,36 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+DB_SSLMODE = os.environ.get('DB_SSLMODE', 'require')
+
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 if DATABASE_URL:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'rwanda_school_book_scanner'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-            'OPTIONS': {},
-        }
-    }
     try:
         import urllib.parse as urlparse
         url = urlparse.urlparse(DATABASE_URL)
-        DATABASES['default'] = {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': url.path[1:],
-            'USER': url.username or '',
-            'PASSWORD': url.password or '',
-            'HOST': url.hostname or 'localhost',
-            'PORT': url.port or 5432,
-            'OPTIONS': {},
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': url.path[1:] if url.path and url.path != '/' else 'postgres',
+                'USER': url.username or '',
+                'PASSWORD': url.password or '',
+                'HOST': url.hostname or 'localhost',
+                'PORT': url.port or 5432,
+                'OPTIONS': {'sslmode': DB_SSLMODE},
+            }
         }
     except Exception:
-        pass
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('DB_NAME', 'postgres'),
+                'USER': os.environ.get('DB_USER', 'postgres'),
+                'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+                'HOST': os.environ.get('DB_HOST', 'localhost'),
+                'PORT': os.environ.get('DB_PORT', '5432'),
+                'OPTIONS': {'sslmode': DB_SSLMODE},
+            }
+        }
 else:
     DATABASES = {
         'default': {
@@ -93,6 +100,7 @@ else:
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': os.environ.get('DB_HOST', 'localhost'),
             'PORT': os.environ.get('DB_PORT', '5432'),
+            'OPTIONS': {'sslmode': DB_SSLMODE},
         }
     }
 

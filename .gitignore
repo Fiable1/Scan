@@ -9,3 +9,6 @@ app/.dart_tool/
 app/build/
 app/.flutter-plugins-dependencies
 .DS_Store
+node_modules/
+.vercel
+.env*

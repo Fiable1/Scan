@@ -1,0 +1,9 @@
+C:\Users\USER\AppData\Roaming\Python\Python314\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: D:\Company\RwandaSchoolBookScanner\backend\staticfiles\
+  mw_instance = middleware(adapted_handler)
+[15/Sep/2026 10:05:27] "GET /api/ HTTP/1.1" 200 59
+[15/Sep/2026 10:05:27,763] - Broken pipe from ('127.0.0.1', 52214)
+[15/Sep/2026 10:05:34] "GET /api/ HTTP/1.1" 200 59
+[15/Sep/2026 10:05:34,446] - Broken pipe from ('10.130.10.74', 52215)
+[15/Sep/2026 10:06:01] "GET /api/schools/ HTTP/1.1" 200 2
+[15/Sep/2026 10:06:02] "GET /api/districts/ HTTP/1.1" 200 299
+[15/Sep/2026 10:06:02,741] - Broken pipe from ('10.130.10.74', 65315)
