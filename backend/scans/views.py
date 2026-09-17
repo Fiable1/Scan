@@ -1,8 +1,13 @@
 import datetime
+import hashlib
+import hmac
 import io
+import secrets
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
+from django.core.mail import send_mail
 from django.db.models import Q, Count, Case, When, Value, CharField
 from django.http import HttpResponse
 from django.utils import timezone
@@ -16,7 +21,7 @@ from rest_framework.authentication import TokenAuthentication
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from .models import School, UserProfile, BookCatalog, BookScan
+from .models import School, UserProfile, BookCatalog, BookScan, PasswordResetCode
 
 
 RWANDAN_DISTRICTS = [
@@ -187,6 +192,103 @@ def login_view(request):
         'librarian': user.get_full_name(),
         'school': profile.school.name,
     })
+
+
+def _hash_reset_code(code):
+    return hashlib.sha256(f'{code}:{settings.SECRET_KEY}'.encode()).hexdigest()
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_view(request):
+    email = request.data.get('email', '').strip().lower()
+    if not email:
+        return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    generic = {'detail': 'If this email is registered, a recovery code was sent.'}
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response(generic)
+
+    code = f'{secrets.randbelow(900000) + 100000}'
+    PasswordResetCode.objects.filter(user=user, used_at__isnull=True).delete()
+    PasswordResetCode.objects.create(
+        user=user,
+        code_hash=_hash_reset_code(code),
+        expires_at=timezone.now() + datetime.timedelta(minutes=15),
+    )
+
+    if not getattr(settings, 'EMAIL_HOST', ''):
+        return Response(
+            {'detail': 'Could not send the recovery email. Please try again later.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        send_mail(
+            subject='Rwanda School Book Scanner recovery code',
+            message=(
+                f'Your password recovery code is: {code}\n\n'
+                'This code expires in 15 minutes. If you did not request it, ignore this email.'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        return Response(
+            {'detail': 'Could not send the recovery email. Please try again later.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    return Response(generic)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password_view(request):
+    email = request.data.get('email', '').strip().lower()
+    code = request.data.get('code', '').strip()
+    new_password = request.data.get('password', '')
+
+    if not email or not code or not new_password:
+        return Response(
+            {'detail': 'Email, recovery code, and new password are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(new_password) < 6:
+        return Response(
+            {'detail': 'Password must be at least 6 characters.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({'detail': 'Invalid recovery code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    code_hash = _hash_reset_code(code)
+    reset = (
+        PasswordResetCode.objects.filter(user=user, used_at__isnull=True)
+        .order_by('-created_at')
+        .first()
+    )
+    if (
+        not reset
+        or reset.expires_at < timezone.now()
+        or not hmac.compare_digest(reset.code_hash, code_hash)
+    ):
+        return Response({'detail': 'Invalid or expired recovery code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+    reset.used_at = timezone.now()
+    reset.save(update_fields=['used_at'])
+    PasswordResetCode.objects.filter(user=user, used_at__isnull=True).delete()
+
+    return Response({'detail': 'Password updated. You can now sign in.'})
 
 
 @api_view(['POST'])

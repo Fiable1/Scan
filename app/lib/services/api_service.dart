@@ -90,6 +90,20 @@ class ApiService {
   static Future<Map<String, dynamic>> login(String email, String password) =>
       _post('auth/login/', {'email': email, 'password': password});
 
+  static Future<Map<String, dynamic>> forgotPassword(String email) =>
+      _post('auth/forgot-password/', {'email': email});
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) =>
+      _post('auth/reset-password/', {
+        'email': email,
+        'code': code,
+        'password': password,
+      });
+
   static Future<Map<String, dynamic>> register(Map<String, dynamic> data) =>
       _post('auth/register/', data);
 

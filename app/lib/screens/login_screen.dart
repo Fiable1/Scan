@@ -4,6 +4,7 @@ import '../theme.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 import 'home_shell.dart';
 import 'backend_url_dialog.dart';
 
@@ -171,7 +172,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () => Navigator.push(
+                            c,
+                            MaterialPageRoute(
+                                builder: (_) => ForgotPasswordScreen(
+                                    initialEmail: email.text.trim()))),
                         child: Text(_t('Forgot password?', rw: 'Wibagiwe ijambobanga?', fr: 'Mot de passe oublié?'),
                             style: const TextStyle(
                                 color: kAccent,

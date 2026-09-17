@@ -1,4 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
@@ -13,6 +18,21 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
+  final MobileScannerController _scanner = MobileScannerController(
+    detectionSpeed: DetectionSpeed.normal,
+    facing: CameraFacing.back,
+    formats: const [
+      BarcodeFormat.ean13,
+      BarcodeFormat.ean8,
+      BarcodeFormat.upcA,
+      BarcodeFormat.upcE,
+      BarcodeFormat.code128,
+      BarcodeFormat.code39,
+      BarcodeFormat.qrCode,
+    ],
+  );
+  bool _handling = false;
+
   String _t(String en, {String? rw, String? fr}) {
     final loc = context.read<AppSettings>().locale;
     if (loc == 'rw' && rw != null) return rw;
@@ -20,8 +40,41 @@ class _ScanScreenState extends State<ScanScreen> {
     return en;
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _prepareCamera();
+  }
+
+  Future<void> _prepareCamera() async {
+    if (kIsWeb) return;
+    try {
+      await Permission.camera.request();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _scanner.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onDetect(BarcodeCapture capture) async {
+    if (_handling) return;
+    String? value;
+    for (final b in capture.barcodes) {
+      final v = b.rawValue ?? b.displayValue;
+      if (v != null && v.trim().isNotEmpty) {
+        value = v.trim();
+        break;
+      }
+    }
+    if (value == null) return;
+    _handling = true;
+    await _lookup(value);
+  }
+
   Future<void> _manualEntry() async {
-    // Web-friendly manual ISBN entry that mirrors the camera scan result.
     final controller = TextEditingController();
     final code = await showModalBottomSheet<String>(
       context: context,
@@ -70,22 +123,74 @@ class _ScanScreenState extends State<ScanScreen> {
       ),
     );
     if (code == null || code.isEmpty) return;
+    _handling = true;
     await _lookup(code);
+  }
+
+  Future<void> _fromGallery() async {
+    try {
+      final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (x == null) return;
+      final found = await _scanner.analyzeImage(x.path);
+      if (found != true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(_t('No barcode found. Enter ISBN manually.',
+                rw: 'Nta barcode yabonetse. Andika ISBN.',
+                fr: 'Aucun code-barres trouvé. Saisissez l\'ISBN.'))));
+      }
+    } catch (_) {
+      if (mounted) await _manualEntry();
+    }
+  }
+
+  Future<void> _howToScan() async {
+    await showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: kNavy,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(_t('How to scan?', rw: 'Nigute wasoma?', fr: 'Comment scanner?'),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          _t(
+              'Point the camera at the book barcode and keep it inside the frame. You can also pick a photo from the gallery or enter the ISBN manually.',
+              rw: 'Erekeza kamera kuri barcode y\'igitabo uyishyire mu kazu. Ushobora no gukoresha ifoto cyangwa kwandika ISBN.',
+              fr: 'Pointez la caméra vers le code-barres et gardez-le dans le cadre. Vous pouvez aussi choisir une photo ou saisir l\'ISBN.'),
+          style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(_t('OK', rw: 'Sawa', fr: 'OK'),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _lookup(String code) async {
     try {
+      await _scanner.stop();
+    } catch (_) {}
+    try {
       final info = await ApiService.lookup(code);
       if (!mounted) return;
-      Navigator.push(
+      await Navigator.push(
           context,
           MaterialPageRoute(
               builder: (_) => BookInfoScreen(code: code, info: info)));
     } catch (e) {
       if (mounted) {
-        // Even on lookup failure allow manual entry.
-        Navigator.push(context,
+        await Navigator.push(context,
             MaterialPageRoute(builder: (_) => BookInfoScreen(code: code)));
+      }
+    } finally {
+      _handling = false;
+      if (mounted) {
+        try {
+          await _scanner.start();
+        } catch (_) {}
       }
     }
   }
@@ -93,235 +198,217 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   Widget build(BuildContext c) {
     final isDark = Theme.of(c).brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: kDarkBg,
-      body: Column(
-        children: [
-          const StatusBar(dark: true),
-          Container(
-            color: kNavy,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                AppBackButton(onPress: () {
-                  // navigate back to dashboard
-                  Navigator.pushReplacement(c,
-                      MaterialPageRoute(builder: (_) => const HomeShell()));
-                }),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(_t('Scan Barcode', rw: 'Soma barcode', fr: 'Scanner le code-barres'),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                ),
-                const Icon(Icons.search, color: Colors.white, size: 22),
-              ],
-            ),
-          ),
-          // Scanner area
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0A0F1E), Color(0xFF0D1523), Color(0xFF0A0F1E)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: Stack(
-                children: [
-                  // Vignette
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            radius: 1.3,
-                            colors: [
-                              Colors.transparent,
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.55),
-                            ],
-                            stops: const [0.35, 0.6, 1.0],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_t('Align barcode within the frame', rw: 'Shyira barcode mu kazu', fr: 'Alignez le code-barres dans le cadre'),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: 256,
-                          height: 160,
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                child: _Corner(horizontal: true),
-                              ),
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: RotatedBox(
-                                    quarterTurns: 1, child: _Corner(horizontal: true)),
-                              ),
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: RotatedBox(
-                                    quarterTurns: 2, child: _Corner(horizontal: true)),
-                              ),
-                              Positioned(
-                                left: 0,
-                                bottom: 0,
-                                child: RotatedBox(
-                                    quarterTurns: 3, child: _Corner(horizontal: true)),
-                              ),
-                              // fake barcode lines
-                              Positioned(
-                                left: 16,
-                                right: 16,
-                                top: 16,
-                                bottom: 16,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(
-                                    28,
-                                    (i) => Container(
-                                      width: (i % 3 == 0)
-                                          ? 3
-                                          : (i.isEven ? 2 : 1),
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 1),
-                                      height: double.infinity,
-                                      color: Colors.white.withOpacity(0.2),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // red laser
-                              Align(
-                                alignment: Alignment.center,
-                                child: Container(
-                                  height: 2,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF87171),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.red
-                                            .withOpacity(0.5),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // tappable reveal
-                              Positioned.fill(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: _manualEntry,
-                                    child: const SizedBox(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          _t('Position the barcode clearly within the frame', rw: 'Shyira barcode neza mu kazu', fr: 'Positionnez clairement le code-barres dans le cadre'),
-                          style: TextStyle(
-                              color: isDark ? kDarkTextMuted : kTextGray, fontSize: 12),
-                        ),
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: _manualEntry,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Text(_t('Enter ISBN manually', rw: 'Andika ISBN mu buryo bw\'amaboko', fr: 'Saisir l\'ISBN manuellement'),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Bottom action bar
-          Container(
-            color: kNavy,
-            padding: const EdgeInsets.fromLTRB(32, 20, 32, 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _ActionButton(Icons.photo_outlined, _t('Gallery', rw: 'Igifuniko', fr: 'Galerie'), onTap: _manualEntry),
-                GestureDetector(
-                  onTap: _manualEntry,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: kAccent,
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: const Color(0xFF93C5FD), width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                                color: kAccent.withOpacity(0.4),
-                                blurRadius: 20,
-                                spreadRadius: 2),
-                          ],
-                        ),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: CustomPaint(
-                                painter: _ScanBarcodeIcon()),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(_t('Capture', rw: 'Fata', fr: 'Capturer'),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: kDarkBg,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Container(
+                color: kNavy,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  children: [
+                    AppBackButton(onPress: () {
+                      Navigator.pushReplacement(c,
+                          MaterialPageRoute(builder: (_) => const HomeShell()));
+                    }),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_t('Scan Barcode', rw: 'Soma barcode', fr: 'Scanner le code-barres'),
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700)),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
+                    ),
+                    GestureDetector(
+                      onTap: _manualEntry,
+                      child: const Icon(Icons.search, color: Colors.white, size: 22),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF0A0F1E), Color(0xFF0D1523), Color(0xFF0A0F1E)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: MobileScanner(
+                          controller: _scanner,
+                          onDetect: _onDetect,
+                          errorBuilder: (context, error, child) => const SizedBox.expand(),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                radius: 1.3,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.55),
+                                ],
+                                stops: const [0.35, 0.6, 1.0],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_t('Align barcode within the frame', rw: 'Shyira barcode mu kazu', fr: 'Alignez le code-barres dans le cadre'),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: 256,
+                              height: 160,
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    left: 0,
+                                    top: 0,
+                                    child: _Corner(horizontal: true),
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: RotatedBox(
+                                        quarterTurns: 1, child: _Corner(horizontal: true)),
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: RotatedBox(
+                                        quarterTurns: 2, child: _Corner(horizontal: true)),
+                                  ),
+                                  Positioned(
+                                    left: 0,
+                                    bottom: 0,
+                                    child: RotatedBox(
+                                        quarterTurns: 3, child: _Corner(horizontal: true)),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Container(
+                                      height: 2,
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF87171),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.red
+                                                .withOpacity(0.5),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              _t('Position the barcode clearly within the frame', rw: 'Shyira barcode neza mu kazu', fr: 'Positionnez clairement le code-barres dans le cadre'),
+                              style: TextStyle(
+                                  color: isDark ? kDarkTextMuted : kTextGray, fontSize: 12),
+                            ),
+                            const SizedBox(height: 16),
+                            GestureDetector(
+                              onTap: _manualEntry,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Text(_t('Enter ISBN manually', rw: 'Andika ISBN mu buryo bw\'amaboko', fr: 'Saisir l\'ISBN manuellement'),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                _ActionButton(Icons.help_outline, _t('How to scan?', rw: 'Nigute wasoma?', fr: 'Comment scanner?'), onTap: _manualEntry),
-              ],
-            ),
+              ),
+              Container(
+                color: kNavy,
+                padding: const EdgeInsets.fromLTRB(32, 20, 32, 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _ActionButton(Icons.photo_outlined, _t('Gallery', rw: 'Igifuniko', fr: 'Galerie'), onTap: _fromGallery),
+                    GestureDetector(
+                      onTap: () async {
+                        try {
+                          await _scanner.start();
+                        } catch (_) {}
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: kAccent,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: const Color(0xFF93C5FD), width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: kAccent.withOpacity(0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: 2),
+                              ],
+                            ),
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(18),
+                                child: CustomPaint(
+                                    painter: _ScanBarcodeIcon()),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(_t('Capture', rw: 'Fata', fr: 'Capturer'),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                    _ActionButton(Icons.help_outline, _t('How to scan?', rw: 'Nigute wasoma?', fr: 'Comment scanner?'), onTap: _howToScan),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

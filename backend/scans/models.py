@@ -41,6 +41,22 @@ class BookCatalog(models.Model):
         return self.title
 
 
+class PasswordResetCode(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='reset_codes')
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'expires_at'], name='scans_passw_user_id_exp_idx'),
+        ]
+
+    def __str__(self):
+        return f"reset for {self.user.email}"
+
+
 class BookScan(models.Model):
     code = models.CharField(max_length=50, db_index=True)
     title = models.CharField(max_length=255, blank=True, default='')
